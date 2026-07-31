@@ -7,3 +7,4 @@ cache/
 *.bat
 .idea/
 .vscode/
+.cursor/rules/server-ops.mdc

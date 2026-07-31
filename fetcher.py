@@ -220,10 +220,12 @@ def parse_champion_page(html: str, slug: str) -> dict[str, Any]:
             if slug_a in ("augments", ""):
                 continue
             wr = None
+            desc_a = ""
             text = a.get_text(" ", strip=True)
-            wm = re.search(r"胜率:\s*([\d.]+)%", text)
+            wm = re.search(r"胜率:\s*([\d.]+)%\s*(.*)$", text)
             if wm:
                 wr = float(wm.group(1))
+                desc_a = (wm.group(2) or "").strip()
             if wr is None:
                 wm = re.search(r"([\d.]+)%", text)
                 if wm:
@@ -237,6 +239,7 @@ def parse_champion_page(html: str, slug: str) -> dict[str, Any]:
                 "slug": slug_a,
                 "name": clean_name,
                 "winrate": wr,
+                "desc": desc_a,
                 "url": BASE + href if href.startswith("/") else href,
             }
             if slug_a not in seen_aug:
@@ -244,8 +247,11 @@ def parse_champion_page(html: str, slug: str) -> dict[str, Any]:
                 augments.append(row)
             else:
                 for item in augments:
-                    if item["slug"] == slug_a and item.get("winrate") is None and wr is not None:
-                        item["winrate"] = wr
+                    if item["slug"] == slug_a:
+                        if item.get("winrate") is None and wr is not None:
+                            item["winrate"] = wr
+                        if not item.get("desc") and desc_a:
+                            item["desc"] = desc_a
                         break
 
         elif re.search(r"/items/[a-z0-9_]+/?$", href):
@@ -303,6 +309,10 @@ def get_champion_guide(slug: str, refresh: bool = False) -> dict[str, Any]:
             guide["title"] = c["title"]
             guide["id"] = c["id"]
             break
+    if path.exists():
+        guide["cached_at"] = int(path.stat().st_mtime)
+    else:
+        guide["cached_at"] = int(time.time())
     out = CACHE / f"guide_{slug}.json"
     out.write_text(json.dumps(guide, ensure_ascii=False, indent=2), encoding="utf-8")
     return guide
