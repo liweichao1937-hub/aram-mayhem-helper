@@ -138,16 +138,26 @@ def search_champions(q: str, limit: int = 12) -> list[dict[str, str]]:
         seen.add(c["slug"])
         hits.append(c)
 
+    def resolve_slug(slug: str, label: str = "") -> dict[str, str]:
+        """Index is built from the site build list; alias slugs may still have pages."""
+        return by_slug.get(slug) or {
+            "id": slug,
+            "slug": slug,
+            "name": label or slug,
+            "title": "",
+            "key": "",
+        }
+
     # 1) 外号精确 / 子串
     slug = alias_slug(q)
     if slug:
-        add(by_slug.get(slug))
+        add(resolve_slug(slug, q))
 
     # 2) 外号表里所有包含关键词的项
     ql = q.lower()
     for alias, s in ALIASES.items():
         if q in alias or alias in q or ql in alias.lower():
-            add(by_slug.get(s))
+            add(resolve_slug(s, alias))
 
     # 3) 正式名 / 称号 / 英文 id
     for c in index:
