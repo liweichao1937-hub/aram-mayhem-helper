@@ -6,5 +6,6 @@ cache/
 .env
 *.bat
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
 .cursor/rules/server-ops.mdc
