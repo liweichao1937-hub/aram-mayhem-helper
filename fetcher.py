@@ -122,10 +122,48 @@ def load_champion_index() -> list[dict[str, str]]:
     return index
 
 
+def load_ddragon_map() -> dict[str, dict[str, str]]:
+    """All champions from Data Dragon, keyed by lowercase slug."""
+    cache_json = CACHE / "champion_ddragon.json"
+    if cache_json.exists() and (time.time() - cache_json.stat().st_mtime) < 24 * 3600:
+        return json.loads(cache_json.read_text(encoding="utf-8"))
+
+    versions = json.loads(
+        _get(
+            "https://ddragon.leagueoflegends.com/api/versions.json",
+            "ddragon_versions.json",
+            max_age_sec=24 * 3600,
+        )
+    )
+    ver = versions[0]
+    raw = json.loads(
+        _get(
+            f"https://ddragon.leagueoflegends.com/cdn/{ver}/data/zh_CN/champion.json",
+            f"ddragon_champions_zh_{ver}.json",
+            max_age_sec=24 * 3600,
+        )
+    )["data"]
+
+    by_slug: dict[str, dict[str, str]] = {}
+    for cid, info in raw.items():
+        key = cid.lower()
+        by_slug[key] = {
+            "id": cid,
+            "slug": key,
+            "name": info["name"],
+            "title": info["title"],
+            "key": info["key"],
+        }
+
+    cache_json.write_text(json.dumps(by_slug, ensure_ascii=False, indent=2), encoding="utf-8")
+    return by_slug
+
+
 def search_champions(q: str, limit: int = 12) -> list[dict[str, str]]:
     q = (q or "").strip()
     index = load_champion_index()
     by_slug = {c["slug"]: c for c in index}
+    ddragon = load_ddragon_map()
     if not q:
         return index[:limit]
 
@@ -138,22 +176,42 @@ def search_champions(q: str, limit: int = 12) -> list[dict[str, str]]:
         seen.add(c["slug"])
         hits.append(c)
 
+    def resolve_slug(slug: str, label: str = "") -> dict[str, str]:
+        """Index is built from the site build list; alias slugs may still have pages."""
+        if slug in by_slug:
+            return by_slug[slug]
+        if slug in ddragon:
+            return dict(ddragon[slug])
+        return {
+            "id": slug,
+            "slug": slug,
+            "name": label or slug,
+            "title": "",
+            "key": "",
+        }
+
     # 1) 外号精确 / 子串
     slug = alias_slug(q)
     if slug:
-        add(by_slug.get(slug))
+        add(resolve_slug(slug, q))
 
     # 2) 外号表里所有包含关键词的项
     ql = q.lower()
     for alias, s in ALIASES.items():
         if q in alias or alias in q or ql in alias.lower():
-            add(by_slug.get(s))
+            add(resolve_slug(s, alias))
 
-    # 3) 正式名 / 称号 / 英文 id
+    # 3) 正式名 / 称号 / 英文 id（站内索引）
     for c in index:
         blob = f"{c['slug']} {c['id']} {c['name']} {c.get('title', '')}".lower()
         if ql in blob or q in c["name"] or q in c.get("title", ""):
             add(c)
+
+    # 4) Data Dragon 全英雄：补上未出现在 builds 列表的英雄（如艾希）
+    for c in ddragon.values():
+        blob = f"{c['slug']} {c['id']} {c['name']} {c.get('title', '')}".lower()
+        if ql in blob or q in c["name"] or q in c.get("title", ""):
+            add(resolve_slug(c["slug"], c["name"]))
 
     return hits[:limit]
 
@@ -302,13 +360,19 @@ def get_champion_guide(slug: str, refresh: bool = False) -> dict[str, Any]:
         path.unlink()
     html = _get(f"{BASE}/zh-cn/build/{slug}/", cache_name)
     guide = parse_champion_page(html, slug)
-    # attach names from index
+    # attach names from index or Data Dragon
     for c in load_champion_index():
         if c["slug"] == slug:
             guide["name"] = c["name"]
             guide["title"] = c["title"]
             guide["id"] = c["id"]
             break
+    else:
+        ddr = load_ddragon_map().get(slug)
+        if ddr:
+            guide["name"] = ddr["name"]
+            guide["title"] = ddr["title"]
+            guide["id"] = ddr["id"]
     if path.exists():
         guide["cached_at"] = int(path.stat().st_mtime)
     else:

@@ -22,6 +22,7 @@ ALIASES: dict[str, str] = {
     "冰鸟": "anivia",
     "火女": "annie",
     "月男": "aphelios",
+    "艾希": "ashe",
     "寒冰": "ashe",
     "冰弓": "ashe",
     "龙王": "aurelionsol",
