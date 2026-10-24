@@ -12,15 +12,12 @@ SITE = "https://arammayhem.com/zh-cn"
 
 PAGE = r"""
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#0b0e13" />
   <title>海克斯大乱斗 · 中转助手</title>
   <style>
-    html { color-scheme: dark; }
     :root {
       --bg: #0b0e13;
       --panel: #151a22;
@@ -335,15 +332,12 @@ PAGE = r"""
 
 VIEW_PAGE = r"""
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#0b0e13" />
   <title>{{ name }} · 简洁预览</title>
   <style>
-    html { color-scheme: dark; }
     :root {
       --bg:#0b0e13; --panel:#151a22; --line:#2a3140; --text:#edf1f7;
       --muted:#9aa3b5; --accent:#d4a017; --ok:#3dd68c;
