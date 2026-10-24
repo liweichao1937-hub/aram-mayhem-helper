@@ -133,10 +133,27 @@ def clean_mayhem_html(html: str, slug: str) -> str:
     if soup.body:
         soup.body.insert(0, bar)
 
+    if soup.html:
+        soup.html["data-theme"] = "dark"
+        classes = soup.html.get("class") or []
+        if isinstance(classes, str):
+            classes = classes.split()
+        if "dark" not in classes:
+            classes.append("dark")
+        soup.html["class"] = classes
+
     if soup.head:
         # Remove any upstream <base> so local absolute paths stay on our host
         for old in soup.head.find_all("base"):
             old.decompose()
+        scheme = soup.new_tag("meta")
+        scheme.attrs["name"] = "color-scheme"
+        scheme.attrs["content"] = "dark"
+        soup.head.insert(0, scheme)
+        dark_style = soup.new_tag("style")
+        dark_style.attrs["id"] = "local-mirror-dark"
+        dark_style.string = "html{color-scheme:dark}"
+        soup.head.insert(0, dark_style)
         csp = soup.new_tag("meta")
         csp.attrs["http-equiv"] = "Content-Security-Policy"
         csp.attrs["content"] = (
